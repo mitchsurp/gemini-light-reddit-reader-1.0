@@ -62,16 +62,15 @@
     /* Comments */
     .comment {
       padding: 6px 0 6px 10px;
-      border-left: 2px solid #edeff1;
+      border-left: 3px solid #edeff1;
       margin-top: 8px;
     }
-    .comment:hover > .comment-header { opacity: 1; }
 
     .comment-header { font-size: 11px; color: var(--reddit-meta); margin-bottom: 4px; }
     .comment-author { font-weight: bold; color: #555; }
     .comment-score { color: var(--reddit-meta); }
     .comment-body { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-    .comment-replies { margin-left: 4px; }
+    .comment-replies { margin-left: 6px; }
 
     .no-comments { color: var(--reddit-meta); font-size: 13px; padding: 10px 0; }
   </style>
@@ -147,11 +146,15 @@
       }
     }
 
-    function renderComments(comments) {
+    const THREAD_COLORS = ['#4F9EDA', '#FF585B', '#46D160', '#FFB000', '#CC69B8', '#0DD3BB', '#FF8C42'];
+
+    function renderComments(comments, depth = 0) {
       const frag = document.createDocumentFragment();
+      const color = THREAD_COLORS[depth % THREAD_COLORS.length];
       for (const c of comments) {
         const div = document.createElement('div');
         div.className = 'comment';
+        div.style.borderLeftColor = color;
 
         const age = timeAgo(c.created);
         div.innerHTML = `
@@ -165,7 +168,7 @@
         if (c.replies.length > 0) {
           const repliesDiv = document.createElement('div');
           repliesDiv.className = 'comment-replies';
-          repliesDiv.appendChild(renderComments(c.replies));
+          repliesDiv.appendChild(renderComments(c.replies, depth + 1));
           div.appendChild(repliesDiv);
         }
 
