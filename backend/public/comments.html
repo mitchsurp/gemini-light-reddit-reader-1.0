@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>comments – reddit reader</title>
+  <style>
+    :root {
+      --reddit-blue: #336699;
+      --reddit-bg: #cee3f8;
+      --reddit-link: #0000ff;
+      --reddit-meta: #888888;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: verdana, arial, helvetica, sans-serif;
+      margin: 0;
+      background: #fff;
+      color: #000;
+    }
+
+    header {
+      background: var(--reddit-bg);
+      padding: 5px 10px;
+      border-bottom: 1px solid #5f99cf;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    header h1 { font-size: 18px; margin: 0; color: var(--reddit-blue); }
+    header h1 a { color: inherit; text-decoration: none; }
+    header h1 a:hover { text-decoration: underline; }
+
+    .back { font-size: 12px; color: var(--reddit-blue); text-decoration: none; font-weight: bold; }
+    .back:hover { text-decoration: underline; }
+
+    .container { max-width: 1000px; margin: 0 auto; padding: 10px; }
+
+    #status { padding: 20px; }
+
+    /* Post header */
+    .post-header { margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #edeff1; }
+    .post-header h2 { font-size: 18px; margin: 0 0 4px 0; }
+    .post-header h2 a { color: var(--reddit-link); text-decoration: none; }
+    .post-header h2 a:hover { text-decoration: underline; }
+    .post-meta { font-size: 11px; color: var(--reddit-meta); margin-bottom: 8px; }
+    .post-meta a { color: var(--reddit-meta); text-decoration: none; }
+    .post-selftext {
+      font-size: 13px;
+      background: #f6f7f8;
+      border: 1px solid #edeff1;
+      padding: 10px;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+    .comment-count { font-size: 13px; font-weight: bold; margin-bottom: 10px; }
+
+    /* Comments */
+    .comment {
+      padding: 6px 0 6px 10px;
+      border-left: 2px solid #edeff1;
+      margin-top: 8px;
+    }
+    .comment:hover > .comment-header { opacity: 1; }
+
+    .comment-header { font-size: 11px; color: var(--reddit-meta); margin-bottom: 4px; }
+    .comment-author { font-weight: bold; color: #555; }
+    .comment-score { color: var(--reddit-meta); }
+    .comment-body { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .comment-replies { margin-left: 4px; }
+
+    .no-comments { color: var(--reddit-meta); font-size: 13px; padding: 10px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="/">reddit reader</a></h1>
+    <a class="back" href="/">← back</a>
+  </header>
+
+  <div class="container">
+    <div id="status">Loading...</div>
+    <div id="content" style="display:none">
+      <div class="post-header">
+        <h2><a id="post-title" href="#" target="_blank" rel="noopener noreferrer"></a></h2>
+        <div class="post-meta" id="post-meta"></div>
+        <div class="post-selftext" id="post-selftext" style="display:none"></div>
+        <div class="comment-count" id="comment-count"></div>
+      </div>
+      <div id="comments"></div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const postUrl = params.get('url');
+
+    if (!postUrl) {
+      document.getElementById('status').textContent = 'No post URL provided.';
+    } else {
+      loadComments(postUrl);
+    }
+
+    async function loadComments(url) {
+      const status = document.getElementById('status');
+      try {
+        const res = await fetch(`/api/comments?url=${encodeURIComponent(url)}`);
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        const data = await res.json();
+
+        const post = data.post;
+        document.title = post.title + ' – reddit reader';
+
+        const titleEl = document.getElementById('post-title');
+        titleEl.textContent = post.title;
+        titleEl.href = post.url;
+
+        document.getElementById('post-meta').innerHTML =
+          `${post.score} points · submitted by <b>${escHtml(post.author)}</b> to <b>r/${escHtml(post.subreddit)}</b>`;
+
+        if (post.selftext && post.selftext.trim()) {
+          const selfEl = document.getElementById('post-selftext');
+          selfEl.textContent = post.selftext;
+          selfEl.style.display = '';
+        }
+
+        document.getElementById('comment-count').textContent =
+          `${data.comments.length} top-level comments (${post.numComments} total)`;
+
+        const commentsEl = document.getElementById('comments');
+        if (data.comments.length === 0) {
+          commentsEl.innerHTML = '<div class="no-comments">No comments yet.</div>';
+        } else {
+          commentsEl.appendChild(renderComments(data.comments));
+        }
+
+        status.style.display = 'none';
+        document.getElementById('content').style.display = '';
+      } catch (err) {
+        status.style.color = 'red';
+        status.textContent = 'Failed to load comments. Please try again.';
+        console.error(err);
+      }
+    }
+
+    function renderComments(comments) {
+      const frag = document.createDocumentFragment();
+      for (const c of comments) {
+        const div = document.createElement('div');
+        div.className = 'comment';
+
+        const age = timeAgo(c.created);
+        div.innerHTML = `
+          <div class="comment-header">
+            <span class="comment-author">${escHtml(c.author)}</span>
+            <span class="comment-score"> · ${c.score} points · ${age}</span>
+          </div>
+          <div class="comment-body">${escHtml(c.body)}</div>
+        `;
+
+        if (c.replies.length > 0) {
+          const repliesDiv = document.createElement('div');
+          repliesDiv.className = 'comment-replies';
+          repliesDiv.appendChild(renderComments(c.replies));
+          div.appendChild(repliesDiv);
+        }
+
+        frag.appendChild(div);
+      }
+      return frag;
+    }
+
+    function timeAgo(utcSeconds) {
+      const seconds = Math.floor(Date.now() / 1000 - utcSeconds);
+      if (seconds < 60) return `${seconds}s ago`;
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      return `${Math.floor(seconds / 86400)}d ago`;
+    }
+
+    function escHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>

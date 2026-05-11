@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>reddit reader</title>
+  <style>
+    :root {
+      --reddit-blue: #336699;
+      --reddit-bg: #cee3f8;
+      --reddit-link: #0000ff;
+      --reddit-meta: #888888;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: verdana, arial, helvetica, sans-serif;
+      margin: 0;
+      background: #fff;
+      color: #000;
+    }
+
+    header {
+      background: var(--reddit-bg);
+      padding: 5px 10px;
+      border-bottom: 1px solid #5f99cf;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    header h1 { font-size: 18px; margin: 0; color: var(--reddit-blue); }
+
+    nav { display: flex; gap: 10px; font-size: 12px; }
+    nav a { color: var(--reddit-blue); text-decoration: none; font-weight: bold; cursor: pointer; }
+    nav a:hover { text-decoration: underline; }
+
+    form { display: flex; gap: 4px; }
+    form input, form button { font-size: 12px; }
+
+    #status { padding: 20px; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
+
+    .post-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .post-item {
+      display: flex;
+      gap: 10px;
+      padding: 5px;
+      background: #fff;
+    }
+
+    .rank { width: 30px; text-align: right; color: #c6c6c6; font-size: 14px; padding-top: 5px; }
+
+    .thumbnail {
+      width: 70px; height: 50px;
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; flex-shrink: 0;
+      font-size: 10px; color: #ccc;
+    }
+
+    .post-content { display: flex; flex-direction: column; }
+
+    .post-title { font-size: 16px; color: var(--reddit-link); text-decoration: none; margin-bottom: 2px; }
+    .post-title:hover { text-decoration: underline; }
+
+    .post-meta { font-size: 10px; color: var(--reddit-meta); }
+    .post-meta a { color: var(--reddit-meta); text-decoration: none; cursor: pointer; }
+    .post-meta a:hover { text-decoration: underline; }
+
+    .post-actions { font-size: 11px; font-weight: bold; color: var(--reddit-meta); margin-top: 2px; }
+    .post-actions a { color: var(--reddit-meta); text-decoration: none; margin-right: 5px; }
+    .post-actions a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      .rank { display: none; }
+      .post-title { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>reddit reader</h1>
+    <nav>
+      <a onclick="loadFeed('all')">all</a>
+      <a onclick="loadFeed('popular')">popular</a>
+      <a onclick="loadFeed('news')">news</a>
+    </nav>
+    <form onsubmit="handleSubmit(event)">
+      <input type="text" id="subreddit-input" placeholder="r/..." />
+      <button type="submit">go</button>
+    </form>
+  </header>
+
+  <div class="container">
+    <div id="status">Loading...</div>
+    <div id="post-list" class="post-list"></div>
+  </div>
+
+  <script>
+    function handleSubmit(e) {
+      e.preventDefault();
+      const val = document.getElementById('subreddit-input').value.trim();
+      if (val) loadFeed(val);
+    }
+
+    async function loadFeed(subreddit) {
+      const status = document.getElementById('status');
+      const list = document.getElementById('post-list');
+      status.textContent = 'Loading...';
+      list.innerHTML = '';
+
+      try {
+        const res = await fetch(`/api/feed?subreddit=${encodeURIComponent(subreddit)}`);
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        const data = await res.json();
+
+        status.textContent = '';
+        data.posts.forEach((post, i) => {
+          const item = document.createElement('div');
+          item.className = 'post-item';
+          item.innerHTML = `
+            <div class="rank">${i + 1}</div>
+            <div class="thumbnail">
+              ${post.thumbnail
+                ? `<img src="${escHtml(post.thumbnail)}" alt="" />`
+                : 'self'}
+            </div>
+            <div class="post-content">
+              <a href="${escHtml(post.link)}" class="post-title" target="_blank" rel="noopener noreferrer">${escHtml(post.title)}</a>
+              <div class="post-meta">
+                submitted by <a>${escHtml(post.author)}</a>
+                to <a onclick="loadFeed('${escHtml(post.subreddit)}')">r/${escHtml(post.subreddit)}</a>
+              </div>
+              <div class="post-actions">
+                <a href="/comments.html?url=${encodeURIComponent(post.link)}">comments</a>
+                <a>share</a>
+                <a>save</a>
+              </div>
+            </div>
+          `;
+          list.appendChild(item);
+        });
+      } catch (err) {
+        status.style.color = 'red';
+        status.textContent = 'Failed to load feed. Please try again.';
+        console.error(err);
+      }
+    }
+
+    function escHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    loadFeed('all');
+  </script>
+</body>
+</html>
