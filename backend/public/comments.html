@@ -66,11 +66,16 @@
       margin-top: 8px;
     }
 
-    .comment-header { font-size: 11px; color: var(--reddit-meta); margin-bottom: 4px; }
+    .comment-header { font-size: 11px; color: var(--reddit-meta); margin-bottom: 4px; cursor: pointer; user-select: none; }
+    .comment-header:hover { color: #555; }
+    .collapse-btn { display: inline-block; width: 14px; text-align: center; font-weight: bold; color: var(--reddit-meta); margin-right: 4px; }
     .comment-author { font-weight: bold; color: #555; }
     .comment-score { color: var(--reddit-meta); }
     .comment-body { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
     .comment-replies { margin-left: 6px; }
+    .comment.collapsed .comment-body,
+    .comment.collapsed .comment-replies { display: none; }
+    .comment.collapsed { opacity: 0.6; }
 
     .no-comments { color: var(--reddit-meta); font-size: 13px; padding: 10px 0; }
   </style>
@@ -159,11 +164,17 @@
         const age = timeAgo(c.created);
         div.innerHTML = `
           <div class="comment-header">
+            <span class="collapse-btn">[-]</span>
             <span class="comment-author">${escHtml(c.author)}</span>
             <span class="comment-score"> · ${c.score} points · ${age}</span>
           </div>
           <div class="comment-body">${escHtml(c.body)}</div>
         `;
+
+        div.querySelector('.comment-header').addEventListener('click', () => {
+          const collapsed = div.classList.toggle('collapsed');
+          div.querySelector('.collapse-btn').textContent = collapsed ? '[+]' : '[-]';
+        });
 
         if (c.replies.length > 0) {
           const repliesDiv = document.createElement('div');
