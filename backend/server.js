@@ -1,51 +1,69 @@
 const express = require('express');
-const Parser = require('rss-parser');
 const cors = require('cors');
 
 const app = express();
 const REDDIT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 reddit-reader-proxy/1.0.0';
-
-const parser = new Parser({ headers: { 'User-Agent': REDDIT_UA } });
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.static('public'));
 
-app.get('/api/feed', async (req, res) => {
-  const { subreddit } = req.query;
-  const targetSubreddit = subreddit || 'all';
-  const url = `https://www.reddit.com/r/${targetSubreddit}/.rss`;
+const VALID_FEED_SORTS = new Set(['hot', 'new', 'top', 'rising', 'controversial']);
+const VALID_SEARCH_SORTS = new Set(['relevance', 'hot', 'new', 'top', 'comments']);
+const VALID_TIMES = new Set(['hour', 'day', 'week', 'month', 'year', 'all']);
 
-  try {
-    const response = await fetch(url, { headers: { 'User-Agent': REDDIT_UA } });
-
-    if (!response.ok) {
-      throw new Error(`Reddit responded with ${response.status}`);
-    }
-
-    const xml = await response.text();
-    const feed = await parser.parseString(xml);
-    
-    const posts = feed.items.map(item => {
-      const thumbMatch = item.content && item.content.match(/<img[^>]+src="([^"]+)"/);
+function parsePosts(children) {
+  return children
+    .filter(c => c.kind === 't3')
+    .map(({ data: p }) => {
+      const preview = p.preview?.images?.[0]?.resolutions?.[1]?.url?.replace(/&amp;/g, '&');
+      const thumb = p.thumbnail?.startsWith('http') ? p.thumbnail : null;
       return {
-        id: item.id || item.guid,
-        title: item.title,
-        link: item.link,
-        author: item.author,
-        pubDate: item.pubDate,
-        thumbnail: thumbMatch ? thumbMatch[1].replace(/&amp;/g, '&') : null,
-        subreddit: targetSubreddit
+        id: p.id,
+        title: p.title,
+        link: `https://www.reddit.com${p.permalink}`,
+        author: p.author,
+        score: p.score,
+        numComments: p.num_comments,
+        thumbnail: preview || thumb || null,
+        subreddit: p.subreddit,
       };
     });
+}
 
-    res.json({
-      subreddit: targetSubreddit,
-      posts: posts
-    });
+app.get('/api/feed', async (req, res) => {
+  const { subreddit = 'all', sort = 'hot', t = 'day' } = req.query;
+  const safeSub = /^[A-Za-z0-9_+]+$/.test(subreddit) ? subreddit : 'all';
+  const safeSort = VALID_FEED_SORTS.has(sort) ? sort : 'hot';
+  const safeTime = VALID_TIMES.has(t) ? t : 'day';
+
+  try {
+    const url = `https://www.reddit.com/r/${safeSub}/${safeSort}.json?limit=25&t=${safeTime}`;
+    const response = await fetch(url, { headers: { 'User-Agent': REDDIT_UA } });
+    if (!response.ok) throw new Error(`Reddit responded with ${response.status}`);
+    const data = await response.json();
+    res.json({ posts: parsePosts(data.data.children) });
   } catch (error) {
-    console.error('Error fetching Reddit RSS:', error);
-    res.status(500).json({ error: 'Failed to fetch RSS feed' });
+    console.error('Error fetching feed:', error);
+    res.status(500).json({ error: 'Failed to fetch feed' });
+  }
+});
+
+app.get('/api/search', async (req, res) => {
+  const { q, sort = 'relevance', t = 'all' } = req.query;
+  if (!q) return res.json({ posts: [] });
+  const safeSort = VALID_SEARCH_SORTS.has(sort) ? sort : 'relevance';
+  const safeTime = VALID_TIMES.has(t) ? t : 'all';
+
+  try {
+    const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=${safeSort}&t=${safeTime}&limit=25`;
+    const response = await fetch(url, { headers: { 'User-Agent': REDDIT_UA } });
+    if (!response.ok) throw new Error(`Reddit responded with ${response.status}`);
+    const data = await response.json();
+    res.json({ posts: parsePosts(data.data.children) });
+  } catch (error) {
+    console.error('Error searching:', error);
+    res.status(500).json({ error: 'Failed to search' });
   }
 });
 
@@ -57,7 +75,6 @@ app.get('/api/autocomplete', async (req, res) => {
     const url = `https://www.reddit.com/api/subreddit_autocomplete_v2.json?query=${encodeURIComponent(q)}&limit=6&include_over_18=false&typeahead_active=true`;
     const response = await fetch(url, { headers: { 'User-Agent': REDDIT_UA } });
     if (!response.ok) return res.json([]);
-
     const data = await response.json();
     const results = (data.data?.children ?? [])
       .filter(c => c.kind === 't5')
@@ -101,9 +118,7 @@ app.get('/api/comments', async (req, res) => {
 
   try {
     const jsonUrl = url.replace(/\/?$/, '.json');
-    const response = await fetch(jsonUrl, {
-      headers: { 'User-Agent': REDDIT_UA }
-    });
+    const response = await fetch(jsonUrl, { headers: { 'User-Agent': REDDIT_UA } });
     if (!response.ok) throw new Error(`Reddit responded with ${response.status}`);
 
     const data = await response.json();
