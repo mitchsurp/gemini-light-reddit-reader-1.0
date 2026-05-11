@@ -225,9 +225,7 @@
           item.innerHTML = `
             <div class="rank">${i + 1}</div>
             <div class="thumbnail">
-              ${post.thumbnail
-                ? `<img src="${escHtml(post.thumbnail)}" alt="" />`
-                : 'self'}
+              <img src="${post.thumbnail || `/api/icon/${encodeURIComponent(post.subreddit)}`}" alt="" onerror="this.src='/snoo.svg'" />
             </div>
             <div class="post-content">
               <a href="${escHtml(post.link)}" class="post-title" target="_blank" rel="noopener noreferrer">${escHtml(post.title)}</a>

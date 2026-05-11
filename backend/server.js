@@ -68,6 +68,31 @@ app.get('/api/autocomplete', async (req, res) => {
   }
 });
 
+const iconCache = new Map();
+
+app.get('/api/icon/:subreddit', async (req, res) => {
+  const sub = req.params.subreddit;
+  if (!/^[A-Za-z0-9_]+$/.test(sub)) return res.redirect('/snoo.svg');
+
+  if (iconCache.has(sub)) {
+    const url = iconCache.get(sub);
+    return res.redirect(url || '/snoo.svg');
+  }
+
+  try {
+    const response = await fetch(`https://www.reddit.com/r/${sub}/about.json`, {
+      headers: { 'User-Agent': REDDIT_UA }
+    });
+    const data = await response.json();
+    const icon = (data.data?.community_icon || data.data?.icon_img || '').split('?')[0] || null;
+    iconCache.set(sub, icon);
+    res.redirect(icon || '/snoo.svg');
+  } catch {
+    iconCache.set(sub, null);
+    res.redirect('/snoo.svg');
+  }
+});
+
 app.get('/api/comments', async (req, res) => {
   const { url } = req.query;
   if (!url || !url.startsWith('https://www.reddit.com/')) {
