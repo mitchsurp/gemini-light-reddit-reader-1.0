@@ -36,8 +36,30 @@
     nav a { color: var(--reddit-blue); text-decoration: none; font-weight: bold; cursor: pointer; }
     nav a:hover { text-decoration: underline; }
 
-    form { display: flex; gap: 4px; }
+    form { display: flex; gap: 4px; position: relative; }
     form input, form button { font-size: 12px; }
+
+    #suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #fff;
+      border: 1px solid #aaa;
+      min-width: 180px;
+      z-index: 100;
+      display: none;
+    }
+    #suggestions div {
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    #suggestions div:hover, #suggestions div.active { background: var(--reddit-bg); }
+    #suggestions .sub-name { font-weight: bold; color: var(--reddit-blue); }
+    #suggestions .sub-count { color: var(--reddit-meta); white-space: nowrap; }
 
     #status { padding: 20px; }
 
@@ -91,8 +113,9 @@
       <a onclick="loadFeed('news')">news</a>
     </nav>
     <form onsubmit="handleSubmit(event)">
-      <input type="text" id="subreddit-input" placeholder="r/..." />
+      <input type="text" id="subreddit-input" placeholder="r/..." autocomplete="off" />
       <button type="submit">go</button>
+      <div id="suggestions"></div>
     </form>
   </header>
 
@@ -102,9 +125,85 @@
   </div>
 
   <script>
+    const input = document.getElementById('subreddit-input');
+    const suggestionsEl = document.getElementById('suggestions');
+    let activeIndex = -1;
+    let debounceTimer = null;
+
+    input.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const q = input.value.trim().replace(/^r\//, '');
+      if (!q) { hideSuggestions(); return; }
+      debounceTimer = setTimeout(() => fetchSuggestions(q), 200);
+    });
+
+    input.addEventListener('keydown', e => {
+      const items = suggestionsEl.querySelectorAll('div');
+      if (!items.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = Math.min(activeIndex + 1, items.length - 1);
+        updateActive(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = Math.max(activeIndex - 1, -1);
+        updateActive(items);
+      } else if (e.key === 'Escape') {
+        hideSuggestions();
+      }
+    });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('form')) hideSuggestions();
+    });
+
+    function updateActive(items) {
+      items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+      if (activeIndex >= 0) input.value = items[activeIndex].dataset.name;
+    }
+
+    async function fetchSuggestions(q) {
+      const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      renderSuggestions(data);
+    }
+
+    function renderSuggestions(results) {
+      activeIndex = -1;
+      suggestionsEl.innerHTML = '';
+      if (!results.length) { hideSuggestions(); return; }
+      results.forEach(r => {
+        const div = document.createElement('div');
+        div.dataset.name = r.name;
+        div.innerHTML = `<span class="sub-name">r/${escHtml(r.name)}</span><span class="sub-count">${formatCount(r.subscribers)}</span>`;
+        div.addEventListener('mousedown', e => {
+          e.preventDefault();
+          input.value = r.name;
+          hideSuggestions();
+          loadFeed(r.name);
+        });
+        suggestionsEl.appendChild(div);
+      });
+      suggestionsEl.style.display = '';
+    }
+
+    function hideSuggestions() {
+      suggestionsEl.style.display = 'none';
+      suggestionsEl.innerHTML = '';
+      activeIndex = -1;
+    }
+
+    function formatCount(n) {
+      if (!n) return '';
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+      if (n >= 1_000) return (n / 1_000).toFixed(0) + 'k';
+      return String(n);
+    }
+
     function handleSubmit(e) {
       e.preventDefault();
-      const val = document.getElementById('subreddit-input').value.trim();
+      const val = input.value.trim().replace(/^r\//, '');
+      hideSuggestions();
       if (val) loadFeed(val);
     }
 

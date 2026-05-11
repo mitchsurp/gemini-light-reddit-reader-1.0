@@ -3,11 +3,9 @@ const Parser = require('rss-parser');
 const cors = require('cors');
 
 const app = express();
-const parser = new Parser({
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 reddit-reader-proxy/1.0.0'
-  }
-});
+const REDDIT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 reddit-reader-proxy/1.0.0';
+
+const parser = new Parser({ headers: { 'User-Agent': REDDIT_UA } });
 const port = process.env.PORT || 3000;
 
 app.use(cors());
@@ -19,11 +17,7 @@ app.get('/api/feed', async (req, res) => {
   const url = `https://www.reddit.com/r/${targetSubreddit}/.rss`;
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 reddit-reader-proxy/1.0.0'
-      }
-    });
+    const response = await fetch(url, { headers: { 'User-Agent': REDDIT_UA } });
 
     if (!response.ok) {
       throw new Error(`Reddit responded with ${response.status}`);
@@ -55,6 +49,25 @@ app.get('/api/feed', async (req, res) => {
   }
 });
 
+app.get('/api/autocomplete', async (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.json([]);
+
+  try {
+    const url = `https://www.reddit.com/api/subreddit_autocomplete_v2.json?query=${encodeURIComponent(q)}&limit=6&include_over_18=false&typeahead_active=true`;
+    const response = await fetch(url, { headers: { 'User-Agent': REDDIT_UA } });
+    if (!response.ok) return res.json([]);
+
+    const data = await response.json();
+    const results = (data.data?.children ?? [])
+      .filter(c => c.kind === 't5')
+      .map(c => ({ name: c.data.display_name, subscribers: c.data.subscribers }));
+    res.json(results);
+  } catch {
+    res.json([]);
+  }
+});
+
 app.get('/api/comments', async (req, res) => {
   const { url } = req.query;
   if (!url || !url.startsWith('https://www.reddit.com/')) {
@@ -64,9 +77,7 @@ app.get('/api/comments', async (req, res) => {
   try {
     const jsonUrl = url.replace(/\/?$/, '.json');
     const response = await fetch(jsonUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 reddit-reader-proxy/1.0.0'
-      }
+      headers: { 'User-Agent': REDDIT_UA }
     });
     if (!response.ok) throw new Error(`Reddit responded with ${response.status}`);
 
