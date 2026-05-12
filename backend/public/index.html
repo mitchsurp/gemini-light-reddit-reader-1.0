@@ -109,8 +109,12 @@
       display: flex; align-items: center; justify-content: center;
       overflow: hidden; flex-shrink: 0;
       font-size: 10px; color: #ccc;
+      cursor: pointer;
+      transition: width 0.15s ease, height 0.15s ease;
     }
-    .thumbnail img { max-width: 100%; max-height: 100%; object-fit: cover; }
+    .thumbnail img { max-width: 100%; max-height: 100%; object-fit: cover; transition: object-fit 0s; }
+    .thumbnail.expanded { width: 180px; height: 130px; }
+    .thumbnail.expanded img { object-fit: contain; }
 
     .post-content { display: flex; flex-direction: column; }
 
@@ -359,6 +363,9 @@
             </div>
           </div>
         `;
+        item.querySelector('.thumbnail').addEventListener('click', function () {
+          this.classList.toggle('expanded');
+        });
         list.appendChild(item);
       });
     }
