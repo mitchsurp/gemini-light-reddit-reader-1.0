@@ -28,6 +28,7 @@
       display: flex;
       align-items: center;
       gap: 20px;
+      flex-wrap: wrap;
     }
 
     header h1 { font-size: 18px; margin: 0; color: var(--reddit-blue); }
@@ -66,11 +67,20 @@
 
     .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
 
+    /* Controls bar: sort links + view toggle side by side */
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      border-bottom: 1px solid #edeff1;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
     .sort-bar {
       font-size: 12px;
-      padding: 6px 0 8px 0;
-      border-bottom: 1px solid #edeff1;
-      margin-bottom: 10px;
       display: flex;
       flex-wrap: wrap;
       gap: 4px 0;
@@ -83,9 +93,38 @@
     .sort-link.active { font-weight: bold; color: #000; text-decoration: underline; }
     .time-filter { margin-left: 12px; color: var(--reddit-meta); }
 
+    /* View toggle buttons */
+    .view-toggle {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+    .view-btn {
+      background: none;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      padding: 2px 9px;
+      font-size: 12px;
+      color: var(--reddit-meta);
+      font-family: inherit;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
+    .view-btn:hover {
+      background: var(--reddit-bg);
+      border-color: var(--reddit-blue);
+      color: var(--reddit-blue);
+    }
+    .view-btn.active {
+      background: var(--reddit-blue);
+      border-color: var(--reddit-blue);
+      color: #fff;
+    }
+
     #status { padding: 20px; }
     #search-label { font-size: 13px; color: var(--reddit-meta); padding: 4px 0 8px 0; }
 
+    /* ── List view ── */
     .post-list { display: flex; flex-direction: column; gap: 10px; }
 
     .post-item {
@@ -113,7 +152,7 @@
       transition: width 0.15s ease, height 0.15s ease;
     }
     .thumbnail img { max-width: 100%; max-height: 100%; object-fit: cover; transition: object-fit 0s; }
-    .thumbnail.expanded { width: 360px; height: 260px; }
+    .thumbnail.expanded { width: min(540px, calc(100vw - 20px)); height: min(380px, 50vh); }
     .thumbnail.expanded img { object-fit: contain; }
 
     .post-content { display: flex; flex-direction: column; }
@@ -129,9 +168,133 @@
     .post-actions a { color: var(--reddit-meta); text-decoration: none; margin-right: 5px; }
     .post-actions a:hover { text-decoration: underline; }
 
+    /* ── Card view ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.15s;
+    }
+    .card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+    .card-image {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #e8e8e8;
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-in;
+    }
+    .card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .card-image .card-no-img {
+      font-size: 11px;
+      color: #aaa;
+      text-align: center;
+      padding: 8px;
+      cursor: default;
+    }
+
+    .card-body {
+      padding: 8px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      color: var(--reddit-link);
+      text-decoration: none;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-title:hover { text-decoration: underline; }
+
+    .card-stats {
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--reddit-meta);
+    }
+
+    .card-meta {
+      font-size: 10px;
+      color: var(--reddit-meta);
+      margin-top: auto;
+    }
+    .card-meta a {
+      color: var(--reddit-meta);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .card-meta a:hover { text-decoration: underline; }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+    .lightbox.open { display: flex; }
+
+    .lightbox img {
+      max-width: 95vw;
+      max-height: 90vh;
+      object-fit: contain;
+      display: block;
+      cursor: default;
+      border-radius: 2px;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      color: #fff;
+      font-size: 30px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      line-height: 1;
+      padding: 4px 8px;
+      opacity: 0.75;
+      font-family: inherit;
+    }
+    .lightbox-close:hover { opacity: 1; }
+
+    /* ── Mobile ── */
     @media (max-width: 600px) {
       .rank { display: none; }
       .post-title { font-size: 14px; }
+      .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
     }
   </style>
 </head>
@@ -152,10 +315,22 @@
   </header>
 
   <div class="container">
-    <div class="sort-bar" id="sort-bar"></div>
+    <div class="controls-bar">
+      <div class="sort-bar" id="sort-bar"></div>
+      <div class="view-toggle">
+        <button class="view-btn" data-view="list" onclick="setViewMode('list')" title="List view">&#9776; list</button>
+        <button class="view-btn" data-view="cards" onclick="setViewMode('cards')" title="Card view">&#9638; cards</button>
+      </div>
+    </div>
     <div id="search-label" style="display:none"></div>
     <div id="status" style="display:none"></div>
-    <div id="post-list" class="post-list"></div>
+    <div id="post-list"></div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" onclick="closeLightbox()">&#215;</button>
+    <img id="lightbox-img" src="" alt="" />
   </div>
 
   <script>
@@ -163,7 +338,16 @@
     const SEARCH_SORTS = ['relevance', 'hot', 'new', 'top', 'comments'];
     const TIME_OPTS   = ['hour', 'day', 'week', 'month', 'year', 'all'];
 
-    let state = { mode: 'feed', subreddit: 'all', sort: 'hot', time: 'day', query: '' };
+    let state = {
+      mode: 'feed',
+      subreddit: 'all',
+      sort: 'hot',
+      time: 'day',
+      query: '',
+      viewMode: localStorage.getItem('viewMode') || 'list',
+    };
+
+    let currentPosts = [];
 
     // ── Autocomplete ──────────────────────────────────────────────────────────
 
@@ -247,13 +431,13 @@
       const val = input.value.trim();
       hideSuggestions();
       if (val) {
-        state = { mode: 'search', subreddit: '', sort: 'relevance', time: 'all', query: val };
+        state = { ...state, mode: 'search', subreddit: '', sort: 'relevance', time: 'all', query: val };
         refresh();
       }
     }
 
     function goSubreddit(sub) {
-      state = { mode: 'feed', subreddit: sub, sort: 'hot', time: 'day', query: '' };
+      state = { ...state, mode: 'feed', subreddit: sub, sort: 'hot', time: 'day', query: '' };
       refresh();
     }
 
@@ -266,6 +450,21 @@
     function setTime(t) {
       state.time = t;
       refresh();
+    }
+
+    // ── View mode ─────────────────────────────────────────────────────────────
+
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      localStorage.setItem('viewMode', mode);
+      updateViewToggle();
+      renderPosts(currentPosts);
+    }
+
+    function updateViewToggle() {
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === state.viewMode);
+      });
     }
 
     // ── Sort bar ──────────────────────────────────────────────────────────────
@@ -339,15 +538,29 @@
       }
     }
 
+    // ── Rendering ─────────────────────────────────────────────────────────────
+
     function renderPosts(posts) {
+      currentPosts = posts;
       const list = document.getElementById('post-list');
-      posts.forEach((post, i) => {
+      list.innerHTML = '';
+      if (state.viewMode === 'cards') {
+        list.className = 'card-grid';
+        renderCards(posts, list);
+      } else {
+        list.className = 'post-list';
+        renderList(posts, list);
+      }
+    }
+
+    function renderList(posts, list) {
+      posts.forEach((post) => {
         const item = document.createElement('div');
         item.className = 'post-item';
         item.innerHTML = `
           <div class="score">${formatCount(post.score)}<br/>pts</div>
           <div class="thumbnail">
-            <img src="${post.thumbnail || `/api/icon/${encodeURIComponent(post.subreddit)}`}" alt="" onerror="this.src='/snoo.svg'" />
+            <img src="${escHtml(post.thumbnail || `/api/icon/${encodeURIComponent(post.subreddit)}`)}" alt="" onerror="this.src='/snoo.svg'" />
           </div>
           <div class="post-content">
             <a href="${escHtml(post.link)}" class="post-title" target="_blank" rel="noopener noreferrer">${escHtml(post.title)}</a>
@@ -370,6 +583,67 @@
       });
     }
 
+    function renderCards(posts, list) {
+      posts.forEach(post => {
+        const imgSrc = post.thumbnail || `/api/icon/${encodeURIComponent(post.subreddit)}`;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="card-image">
+            <img src="${escHtml(imgSrc)}" alt="" />
+          </div>
+          <div class="card-body">
+            <a href="${escHtml(post.link)}" class="card-title" target="_blank" rel="noopener noreferrer">${escHtml(post.title)}</a>
+            <div class="card-stats">${formatCount(post.score)} pts &middot; ${post.numComments} comments</div>
+            <div class="card-meta">
+              <a onclick="goSubreddit('${escHtml(post.subreddit)}')">r/${escHtml(post.subreddit)}</a>
+              &middot; by ${escHtml(post.author)}
+            </div>
+          </div>
+        `;
+
+        const img = card.querySelector('.card-image img');
+        const cardImageEl = card.querySelector('.card-image');
+
+        img.addEventListener('error', () => {
+          cardImageEl.innerHTML = `<div class="card-no-img">r/${escHtml(post.subreddit)}</div>`;
+        });
+
+        cardImageEl.addEventListener('click', () => {
+          const currentSrc = img.src;
+          if (currentSrc && img.complete && img.naturalWidth > 0) {
+            openLightbox(currentSrc);
+          }
+        });
+
+        list.appendChild(card);
+      });
+    }
+
+    // ── Lightbox ──────────────────────────────────────────────────────────────
+
+    function openLightbox(src) {
+      const lb = document.getElementById('lightbox');
+      document.getElementById('lightbox-img').src = src;
+      lb.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      const lb = document.getElementById('lightbox');
+      lb.classList.remove('open');
+      document.body.style.overflow = '';
+      document.getElementById('lightbox-img').src = '';
+    }
+
+    document.getElementById('lightbox').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeLightbox();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     function formatCount(n) {
@@ -390,6 +664,7 @@
 
     // ── Init ──────────────────────────────────────────────────────────────────
 
+    updateViewToggle();
     refresh();
   </script>
 </body>

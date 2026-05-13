@@ -1,4 +1,4 @@
-# gemini-light-reddit-reader-1.0
+# gemini-light-reddit-reader-1.1
 
 A lightweight Reddit reader with an old-Reddit aesthetic. No accounts, no tracking, no JavaScript frameworks — just an Express proxy and plain HTML.
 
@@ -12,6 +12,8 @@ Built with [Google Gemini](https://gemini.google.com) and [Claude](https://claud
 - Post scores and comment counts on every listing
 - Thumbnail images from post previews; subreddit Snoo icons for self-posts
 - Threaded comments viewer with color-coded depth levels and collapse/expand
+- **Card view** — toggle between classic list and a responsive card grid; choice persists across sessions
+- **Card images** open full-screen in a lightbox (tap image, Escape or tap outside to dismiss)
 - Classic old-Reddit look and feel
 
 ## Stack
